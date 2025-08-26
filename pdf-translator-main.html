@@ -1,0 +1,1489 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="pageTitle">PDF Translator</title>
+    <meta name="description" content="An AI-powered tool to translate PDF documents easily.">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Dropzone.js for file uploads -->
+    <link rel="stylesheet" href="https://unpkg.com/dropzone@5/dist/min/dropzone.min.css" type="text/css" />
+    <script src="https://unpkg.com/dropzone@5/dist/min/dropzone.min.js"></script>
+    
+    <!-- PDF & DOCX LIBRARIES -->
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0"></script>
+
+    <!-- Custom Styles & Tailwind Config -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Vazirmatn:wght@400;500;600;700&display=swap');
+        html { scroll-behavior: smooth; }
+        body { font-family: 'Inter', sans-serif; }
+        .lang-fa body { font-family: 'Vazirmatn', sans-serif; }
+        .dz-message { margin: 0 !important; }
+        .dropzone { border: 2px dashed #e5e7eb; border-radius: 0.75rem; background-color: #f9fafb; transition: background-color 0.2s ease; }
+        .dropzone:hover { background-color: #f3f4f6; }
+        .dark .dropzone { border-color: #4b5563; background-color: #1f2937; }
+        .dark .dropzone:hover { background-color: #374151; }
+        .step-section { display: none; }
+        .step-section.active { display: block; }
+        [dir="rtl"] .group .group-hover\:block { display: none !important; } /* Tailwind RTL fix for group-hover */
+    </style>
+    <script>
+        tailwind.config = {
+            darkMode: 'media',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { '50': '#eff6ff', '100': '#dbeafe', '200': '#bfdbfe', '300': '#93c5fd', '400': '#60a5fa', '500': '#3b82f6', '600': '#2563eb', '700': '#1d4ed8', '800': '#1e40af', '900': '#1e3a8a', '950': '#172554' }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 antialiased">
+
+    <!-- Main Container -->
+    <div class="container mx-auto max-w-5xl px-4 py-8 md:py-12">
+        <!-- Header -->
+        <header class="text-center mb-10">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-primary-600 mb-2" data-i18n="pageTitle">PDF Translator</h1>
+            <p class="text-lg text-gray-500 dark:text-gray-400" data-i18n="pageSubtitle">AI-Powered Document Translation</p>
+        </header>
+
+        <!-- Main Content: Form & Results -->
+        <div id="form-container">
+             <!-- Step Navigator -->
+            <div class="flex flex-col md:flex-row justify-between border-b border-gray-200 dark:border-gray-700 pb-4 mb-8">
+                <div id="step-1-indicator" class="group flex flex-col border-s-4 ps-4 py-2 md:border-s-0 md:border-t-4 md:pt-4 md:pb-0">
+                    <span class="text-sm font-medium" data-i18n="step1Indicator">Step 1</span>
+                    <span class="text-sm font-medium" data-i18n="step1Name">API Setup</span>
+                </div>
+                <div id="step-2-indicator" class="group flex flex-col border-s-4 ps-4 py-2 md:border-s-0 md:border-t-4 md:pt-4 md:pb-0">
+                    <span class="text-sm font-medium" data-i18n="step2Indicator">Step 2</span>
+                    <span class="text-sm font-medium" data-i18n="step2Name">Add Content</span>
+                </div>
+                <div id="step-3-indicator" class="group flex flex-col border-s-4 ps-4 py-2 md:border-s-0 md:border-t-4 md:pt-4 md:pb-0">
+                    <span class="text-sm font-medium" data-i18n="step3Indicator">Step 3</span>
+                    <span class="text-sm font-medium" data-i18n="step3Name">Translate</span>
+                </div>
+            </div>
+
+            <!-- Translation Form -->
+            <form id="translate-form" class="space-y-8">
+                <!-- Step 1: API Key -->
+                <section id="step-1" data-step="1" class="step-section">
+                    <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
+                        <h2 class="text-2xl font-bold mb-2" data-i18n="step1Title">Step 1: Configure Your API Key</h2>
+                        <p class="text-gray-600 dark:text-gray-400 mb-4" data-i18n="step1Description">This tool uses the Gemini API. Please provide your API key to proceed. Your key is stored locally in your browser and is never sent to our servers.</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Select existing key -->
+                            <div>
+                                <label for="api-key-select" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white" data-i18n="selectApiKeyLabel">Select an API Key</label>
+                                <div class="flex items-center gap-2">
+                                    <select id="api-key-select" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"></select>
+                                    <button type="button" id="delete-key-btn" title="Delete Selected Key" class="p-2.5 text-gray-500 hover:text-red-600 disabled:text-gray-400 disabled:cursor-not-allowed">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Add new key -->
+                            <div class="border-t pt-4 md:border-t-0 md:pt-0 md:border-s md:ps-6 dark:border-gray-700">
+                                <h3 class="font-semibold mb-2" data-i18n="addNewKeyTitle">Add a New Key</h3>
+                                <div class="space-y-4">
+                                    <input type="text" id="new-key-name" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600" data-i18n-placeholder="newKeyNameLabel">
+                                    <div class="relative">
+                                        <input type="password" id="new-key-value" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600" data-i18n-placeholder="newKeyValueLabel">
+                                        <button type="button" id="togglePasswordBtn" class="absolute inset-y-0 end-0 flex items-center pe-3 text-gray-500">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                    <button type="button" id="add-key-btn" class="w-full text-white bg-primary-600 hover:bg-primary-700 focus:ring-4 focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5" data-i18n="addKeyBtn">Add Key</button>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="text-center text-sm mt-6 text-gray-500" data-i18n-html="getApiKeyLink">Get your free key from <a href='https://aistudio.google.com/app/apikey' target='_blank' class='font-medium underline hover:text-blue-600'>Google AI Studio</a>.</p>
+                    </div>
+
+                    <div class="mt-8 flex justify-end">
+                        <button type="button" id="next-to-step-2" class="text-white bg-primary-600 hover:bg-primary-700 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed">
+                            <span data-i18n="next">Next</span> <i class="fas fa-arrow-right ms-2 next-btn-icon"></i>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- Step 2: Add Content -->
+                <section id="step-2" data-step="2" class="step-section">
+                    <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
+                        <h2 class="text-2xl font-bold mb-2" data-i18n="step2Title">Step 2: Add Your PDF Document</h2>
+                        
+                        <div id="file-input-container">
+                            <div id="dropzone-upload" class="dropzone p-6 text-center cursor-pointer">
+                                <div class="dz-message">
+                                    <i class="fas fa-file-pdf text-4xl text-gray-400 mb-3"></i>
+                                    <p class="text-lg font-semibold text-gray-700 dark:text-gray-300" data-i18n="dropzone">Drag & drop a PDF file</p>
+                                    <p class="text-sm text-gray-500 my-2" data-i18n="dropzoneOr">or</p>
+                                    <button type="button" id="choose-file-btn" class="px-4 py-2 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700" data-i18n="dropzoneChoose">Choose File</button>
+                                </div>
+                            </div>
+                            <div id="file-feedback" class="hidden mt-4 p-4 bg-green-50 dark:bg-green-900/50 border border-green-200 dark:border-green-700 rounded-lg flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <i class="fas fa-check-circle text-green-500 me-3"></i>
+                                    <div>
+                                        <span class="font-semibold" data-i18n="fileSelected">File selected:</span>
+                                        <span id="file-name" class="ms-2 text-gray-700 dark:text-gray-300"></span>
+                                    </div>
+                                </div>
+                                <button type="button" id="remove-file" class="text-red-500 hover:text-red-700 text-lg">
+                                    <i class="fas fa-times-circle"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="mt-8 flex justify-between">
+                        <button type="button" id="back-to-step-1" class="text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-500 focus:ring-4 focus:outline-none focus:ring-gray-200 font-medium rounded-lg text-sm px-5 py-2.5 text-center">
+                            <i class="fas fa-arrow-left me-2 back-btn-icon"></i> <span data-i18n="back">Back</span>
+                        </button>
+                        <button type="button" id="next-to-step-3" class="text-white bg-primary-600 hover:bg-primary-700 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed">
+                           <span data-i18n="next">Next</span> <i class="fas fa-arrow-right ms-2 next-btn-icon"></i>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- Step 3: Translate -->
+                <section id="step-3" data-step="3" class="step-section">
+                    <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
+                        <h2 class="text-2xl font-bold mb-4" data-i18n="step3Title">Step 3: Finalize and Translate</h2>
+                        
+                        <div>
+                            <label for="lang-input" class="block mb-2 text-sm font-medium" data-i18n="targetLangLabel">Target Language</label>
+                            <input type="text" id="lang-input" required class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600" data-i18n-placeholder="targetLangPlaceholder">
+                        </div>
+
+                        <!-- Advanced Settings Accordion -->
+                        <details class="mt-6 group">
+                            <summary class="list-none flex items-center justify-between cursor-pointer font-medium text-gray-900 dark:text-white">
+                                <span data-i18n="advancedSettings">Advanced Settings</span>
+                                <i class="fas fa-chevron-down transition-transform group-open:rotate-180"></i>
+                            </summary>
+                            <div class="mt-4 border-t border-gray-200 dark:border-gray-700 pt-4 space-y-4">
+                               <div class="p-3 bg-yellow-50 dark:bg-yellow-900/30 border-s-4 border-yellow-400 text-yellow-800 dark:text-yellow-200 text-sm">
+                                   <i class="fas fa-exclamation-triangle me-2"></i> <span data-i18n="advancedWarning">Adjusting these settings can affect performance, cost, and quality. Proceed with caution.</span>
+                               </div>
+                               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                   <div>
+                                       <label for="model" class="block mb-2 text-sm font-medium" data-i18n="modelLabel">AI Model</label>
+                                       <select id="model" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600">
+                                            <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                                                    <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                                                    <option value="gemini-2.0-flash" selected>Gemini 2.0 Flash</option>
+                                                    <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite</option>
+                                                    <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash-Lite</option>
+                                       </select>
+                                   </div>
+                                   <div>
+                                       <label for="temperature" class="block mb-2 text-sm font-medium" data-i18n="temperatureLabel">Temperature</label>
+                                       <input type="number" id="temperature" value="0.7" min="0" max="1" step="0.1" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600">
+                                   </div>
+                                   <div>
+                                       <label class="block mb-2 text-sm font-medium" data-i18n="chunkStrategyLabel">Chunking Strategy</label>
+                                       <div class="flex items-center space-x-4">
+                                            <div class="flex items-center"><input type="radio" id="chunk_default" name="chunk_strategy" value="default" class="w-4 h-4"><label for="chunk_default" class="ms-2 text-sm" data-i18n="chunkStrategyDefault">Default</label></div>
+                                            <div class="flex items-center"><input type="radio" id="chunk_auto" name="chunk_strategy" value="auto" class="w-4 h-4" checked><label for="chunk_auto" class="ms-2 text-sm" data-i18n="chunkStrategyAuto">Automatic</label></div>
+                                            <div class="flex items-center"><input type="radio" id="chunk_manual" name="chunk_strategy" value="manual" class="w-4 h-4"><label for="chunk_manual" class="ms-2 text-sm" data-i18n="chunkStrategyManual">Manual</label></div>
+                                       </div>
+                                       <div id="manual_chunk_container" class="mt-2 hidden">
+                                            <label for="chunk_count_manual" class="text-xs" data-i18n="chunkCountManualLabel">Number of Chunks</label>
+                                            <input type="number" id="chunk_count_manual" value="20" min="1" class="mt-1 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2 dark:bg-gray-700 dark:border-gray-600">
+                                       </div>
+                                   </div>
+                                    <div>
+                                       <label for="request-delay" class="block mb-2 text-sm font-medium" data-i18n="requestDelayLabel">Request Delay (ms)</label>
+                                       <input type="number" id="request-delay" value="4000" min="0" step="100" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600">
+                                       <p class="text-xs text-gray-500 mt-1" data-i18n="requestDelayNote">Delay between each API request (e.g., 4000 for 15 RPM).</p>
+                                   </div>
+                               </div>
+                               <div class="flex items-center pt-4">
+                                    <input id="useProxyCheckbox" type="checkbox" class="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500">
+                                    <label for="useProxyCheckbox" class="ms-2 text-sm font-medium" data-i18n="useProxyLabel">Use Proxy</label>
+                               </div>
+                               <div id="custom-proxy-container" class="hidden">
+                                    <label for="custom-proxy-input" class="block text-sm font-medium" data-i18n="customProxyLabel">Custom Proxy URL (Optional)</label>
+                                    <input type="url" id="custom-proxy-input" placeholder="https://your-proxy.workers.dev/" class="mt-1 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg w-full p-2.5 dark:bg-gray-700 dark:border-gray-600" value="https://sbt.fxsinahamidi.workers.dev/">
+                                    <p class="text-xs text-gray-500 mt-1" data-i18n-html="customProxyNote">Deploy your own proxy using <a href="https://github.com/yebekhe/middleman" target="_blank" class="underline hover:text-primary-400">Middleman</a>.</p>
+                               </div>
+                               <!-- Prompt Settings -->
+                               <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+                                   <h4 class="font-semibold mb-2" data-i18n="promptSettingsTitle">Prompt & Separator Settings</h4>
+                                   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                       <div>
+                                        <label for="tone-select" class="block mb-1 text-sm" data-i18n="translationToneLabel">Translation Tone</label>
+                                        <select id="tone-select"
+                                            class="w-full bg-gray-50 border border-gray-300 text-sm rounded-lg p-2 dark:bg-gray-700 dark:border-gray-600">
+                                            <option value="">Default (None)</option>
+                                            <option value="casual">Casual</option>
+                                            <option value="formal">Formal</option>
+                                            <option value="informal">Informal</option>
+                                            <option value="professional">Professional</option>
+                                            <option value="technical">Technical</option>
+                                            <option value="humorous">Humorous</option>
+                                            <option value="dramatic">Dramatic</option>
+                                            <option value="custom">Custom...</option>
+                                        </select>
+                                        <input type="text" id="tone-custom-input" placeholder="Enter your custom tone"
+                                            class="w-full bg-gray-50 border border-gray-300 text-sm rounded-lg p-2 dark:bg-gray-700 dark:border-gray-600 mt-2 hidden">
+                                        <p class="text-xs text-gray-500 mt-1" data-i18n="translationToneNote">e.g., formal, informal, humorous, dramatic.
+                                        </p>
+                                    </div>
+                                       <div class="md:col-span-2">
+                                            <label for="prompt-template-input" class="block mb-1 text-sm" data-i18n="customPromptLabel">Translation Prompt Template</label>
+                                            <textarea id="prompt-template-input" rows="5" class="w-full bg-gray-50 border border-gray-300 text-sm rounded-lg p-2 dark:bg-gray-700 dark:border-gray-600">You are an expert translator. Your task is to translate the entire text block below to {LANG} with a {TONE} tone.
+
+Preserve the original paragraph structure and formatting (like line breaks) as best as you can.
+Your response MUST contain ONLY the translated text, without any additional explanations, greetings, or commentary.
+                                                
+Original Text:
+{TEXT}</textarea>
+                                            <p class="text-xs text-gray-500 mt-1" data-i18n="customPromptNote">Use {LANG}, {TONE}, and {TEXT} as placeholders.</p>
+                                       </div>
+                                       <div class="flex items-center">
+                                            <input id="no-censor-checkbox" type="checkbox" class="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500">
+                                            <label for="no-censor-checkbox" class="ms-2 text-sm font-medium" data-i18n="noCensorLabel">Add "uncensored" directive</label>
+                                       </div>
+                                   </div>
+                               </div>
+                            </div>
+                        </details>
+                    </div>
+
+                    <div id="error-message" style="display: none;" class="mt-6 p-4 rounded-xl flex items-start">
+                        <i class="fas fa-exclamation-circle text-red-500 text-xl me-3"></i>
+                        <div>
+                            <h3 class="text-md font-bold text-red-800 dark:text-red-200">An Error Occurred</h3>
+                            <div class="text-sm mt-2 text-red-700 dark:text-red-300"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-8 flex justify-between items-center">
+                        <button type="button" id="back-to-step-2" class="text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-500 focus:ring-4 focus:outline-none focus:ring-gray-200 font-medium rounded-lg text-sm px-5 py-2.5 text-center">
+                            <i class="fas fa-arrow-left me-2 back-btn-icon"></i> <span data-i18n="back">Back</span>
+                        </button>
+                        <button id="submit-button" type="submit" class="text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center">
+                           <i class="fas fa-language me-2"></i> <span data-i18n="translateNow">Translate Now</span>
+                        </button>
+                    </div>
+                </section>
+            </form>
+        </div>
+
+        <!-- Results Area -->
+        <div id="results-area" style="display: none;">
+            <!-- Progress Bar -->
+            <div id="progress-container" class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold" data-i18n="progressTitle">Translation in Progress...</h2>
+                    <!-- NEW: Button to toggle log during translation -->
+                    <button id="toggle-log-btn-progress" class="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600">
+                        <i class="fas fa-clipboard-list me-2"></i><span data-i18n="logTitle">Live Log</span>
+                    </button>
+                </div>
+                <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 mb-2">
+                    <div id="progress" class="bg-primary-600 h-4 rounded-full" style="width: 0%"></div>
+                </div>
+                <div class="flex justify-between text-sm text-gray-600 dark:text-gray-400">
+                    <span id="progress-text">0% <span data-i18n="progressComplete">Complete</span></span>
+                    <span id="chunk-status">...</span>
+                    <span id="time-estimate" data-i18n="progressEstimating">Estimating...</span>
+                </div>
+            </div>
+            
+            <!-- Log Viewer (MOVED OUTSIDE OF EDITOR) -->
+            <div id="log-viewer-container" class="my-4 border rounded-lg bg-gray-900 text-white font-mono text-xs p-4" style="display: none;">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="font-bold text-gray-300" data-i18n="logTitle">Live Log</h3>
+                    <div>
+                         <button id="copy-log-btn" class="px-2 py-1 bg-gray-700 rounded hover:bg-gray-600 text-gray-300"><i class="fas fa-copy me-1"></i> <span data-i18n="logCopy">Copy</span></button>
+                         <button id="clear-log-btn" class="px-2 py-1 bg-gray-700 rounded hover:bg-gray-600 text-gray-300 ms-2"><i class="fas fa-trash me-1"></i> <span data-i18n="logClear">Clear</span></button>
+                    </div>
+                </div>
+                <div id="log-output" class="max-h-60 overflow-y-auto bg-black p-2 rounded"></div>
+            </div>
+
+            <!-- Editor View -->
+            <div id="editor-container" style="display: none;" class="mt-6 bg-white dark:bg-gray-800 p-2 md:p-6 rounded-xl shadow-md">
+                <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4 flex-wrap">
+                    <h2 class="text-2xl font-bold" data-i18n="editTitle">Edit Your Translation</h2>
+                    <div class="flex items-center space-x-2 mt-4 md:mt-0">
+                        <button id="find-replace-btn" class="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600">
+                            <i class="fas fa-search me-2"></i><span data-i18n="findReplace">Find/Replace</span>
+                        </button>
+                        <!-- RENAMED ID -->
+                        <button id="toggle-log-btn-editor" class="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600">
+                            <i class="fas fa-clipboard-list me-2"></i><span data-i18n="logTitle">Live Log</span>
+                        </button>
+                        <button id="start-new-from-editor-btn" class="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-500 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600">
+                            <i class="fas fa-redo me-2"></i><span data-i18n="startNew">Start New</span>
+                        </button>
+                        
+                        <!-- New Dropdown Download Button -->
+                        <div id="download-btn-container" class="relative z-20">
+                            <button id="download-dropdown-toggle" class="px-3 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg inline-flex items-center">
+                                <i class="fas fa-download me-2"></i>
+                                <span data-i18n="downloadFile">Download File</span>
+                                <i class="fas fa-chevron-down ms-2"></i>
+                            </button>
+                            <!-- Dropdown menu -->
+                            <div id="download-dropdown-menu" class="hidden absolute end-0 mt-2 z-10 w-48 bg-white rounded-lg shadow-lg dark:bg-gray-700">
+                                <ul class="py-2 text-sm text-gray-700 dark:text-gray-200">
+                                    <li>
+                                        <a href="#" id="download-docx-btn" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">
+                                            <i class="fas fa-file-word w-4 me-2"></i> As DOCX
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="#" id="download-pdf-btn" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">
+                                            <i class="fas fa-file-pdf w-4 me-2"></i> As PDF
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="#" id="download-txt-btn" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">
+                                            <i class="fas fa-file-alt w-4 me-2"></i> As TXT
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="relative overflow-x-auto shadow-md sm:rounded-lg max-h-[70vh] overflow-y-auto">
+                    <table class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 sticky top-0 z-10">
+                            <tr>
+                                <th scope="col" class="px-4 py-3 w-24" data-i18n="tableHeaderId">ID</th>
+                                <th scope="col" class="px-6 py-3" data-i18n="tableHeaderOriginal">Original Text</th>
+                                <th scope="col" class="px-6 py-3" data-i18n="tableHeaderTranslated">Translated Text (Editable)</th>
+                                <th scope="col" class="px-4 py-3 w-16 text-center" data-i18n="tableHeaderAction">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="editor-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Footer -->
+        <footer class="mt-12 text-center text-sm text-gray-500">
+            <div class="flex justify-center items-center space-x-4 mb-4">
+                <button id="languageToggle" class="font-medium hover:text-primary-500">
+                    <i class="fas fa-globe me-1"></i> <span id="lang-text">English / فارسی</span>
+                </button>
+                <span>|</span>
+                 <button id="clear-memory-button" class="font-medium hover:text-primary-500">
+                    <i class="fas fa-broom me-1"></i> <span data-i18n="clearMemory">Clear Translation Memory</span>
+                </button>
+            </div>
+            <p data-i18n-html="footerText"><i class="fas fa-heart text-red-500 mx-1"></i>  </p>
+        </footer>
+    </div>
+
+
+    <!-- Modals -->
+    <div id="model-switch-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900 bg-opacity-60" style="display: none;">
+        <div id="model-switch-dialog" class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6 transform transition-all opacity-0 scale-95">
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2" data-i18n="quotaModalTitle">Quota Reached</h3>
+            <p id="modal-message" class="text-sm text-gray-600 dark:text-gray-400 mb-4">...</p>
+            <label for="modal-combo-select" class="block mb-2 text-sm font-medium" data-i18n="quotaModalLabel">Switch to a different API Key / Model combination:</label>
+            <select id="modal-combo-select" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600"></select>
+            <p class="text-xs text-gray-500 mt-2" data-i18n="quotaModalNote">The translation will resume from where it left off.</p>
+            <div class="mt-6 flex justify-end space-x-3">
+                <button id="modal-cancel-btn" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-500 dark:hover:bg-gray-600" data-i18n="cancelTranslationBtn">Cancel Translation</button>
+                <button id="modal-switch-btn" class="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg" data-i18n="switchAndContinueBtn">Switch and Continue</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="find-replace-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900 bg-opacity-60" style="display: none;">
+        <div id="find-replace-dialog" class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6 transform transition-all opacity-0 scale-95">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white" data-i18n="findReplaceTitle">Find and Replace</h3>
+                <button id="find-replace-close-btn" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">&times;</button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label for="find-input" class="block text-sm font-medium" data-i18n="findLabel">Find</label>
+                    <input type="text" id="find-input" class="mt-1 w-full bg-gray-50 border border-gray-300 text-sm rounded-lg p-2 dark:bg-gray-700 dark:border-gray-600">
+                </div>
+                <div>
+                    <label for="replace-input" class="block text-sm font-medium" data-i18n="replaceLabel">Replace with</label>
+                    <input type="text" id="replace-input" class="mt-1 w-full bg-gray-50 border border-gray-300 text-sm rounded-lg p-2 dark:bg-gray-700 dark:border-gray-600">
+                </div>
+                <div class="flex items-center">
+                    <input id="case-sensitive-checkbox" type="checkbox" class="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500">
+                    <label for="case-sensitive-checkbox" class="ms-2 text-sm font-medium" data-i18n="caseSensitiveLabel">Case sensitive</label>
+                </div>
+                 <p id="find-replace-feedback" class="text-sm text-red-500 h-4"></p>
+            </div>
+            <div class="mt-6 flex justify-end space-x-2">
+                <button id="find-next-btn" class="px-4 py-2 text-sm font-medium rounded-lg border" data-i18n="findNextBtn">Find Next</button>
+                <button id="replace-btn" class="px-4 py-2 text-sm font-medium rounded-lg border" data-i18n="replaceBtn">Replace</button>
+                <button id="replace-all-btn" class="px-4 py-2 text-sm font-medium rounded-lg text-white bg-primary-600 hover:bg-primary-700" data-i18n="replaceAllBtn">Replace All</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Main Project Script -->
+    <script type="module">
+        import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/+esm';
+        
+        Dropzone.autoDiscover = false;
+
+        const i18n = {
+            en: {
+                'pageTitle': 'PDF Translator', 'pageSubtitle': 'AI-Powered Document Translation', 'next': 'Next', 'back': 'Back', 'remove': 'Remove', 'clearMemory': 'Clear Translation Memory',
+                'step1Indicator': 'Step 1', 'step1Name': 'API Setup', 'step2Indicator': 'Step 2', 'step2Name': 'Add Content', 'step3Indicator': 'Step 3', 'step3Name': 'Translate',
+                'step1Title': 'Step 1: Configure Your API Key', 'step1Description': 'This tool uses the Gemini API. Please provide your API key to proceed. Your key is stored locally in your browser and is never sent to our servers.',
+                'selectApiKeyLabel': 'Select an API Key', 'addNewKeyTitle': 'Add a New Key', 'newKeyNameLabel': 'Key Name (e.g., "Personal", "Work")', 'newKeyValueLabel': 'API Key Value',
+                'addKeyBtn': 'Add Key', 'deleteKeyBtn': 'Delete Key', 'noKeysAdded': 'No keys added yet. Add one below.', 'getApiKeyLink': "Get your free key from <a href='https://aistudio.google.com/app/apikey' target='_blank' class='font-medium underline hover:text-blue-600'>Google AI Studio</a>.",
+                'step2Title': 'Step 2: Add Your PDF Document', 'dropzone': "Drag & drop a PDF file", 'dropzoneOr': "or", 'dropzoneChoose': "Choose File", 'fileSelected': "File selected:",
+                'step3Title': 'Step 3: Finalize and Translate', 'targetLangLabel': 'Target Language', 'targetLangPlaceholder': 'e.g., Spanish, French, Japanese',
+                'advancedSettings': 'Advanced Settings', 'advancedWarning': 'Adjusting these settings can affect performance, cost, and quality. Proceed with caution.',
+                'modelLabel': 'AI Model', 'temperatureLabel': 'Temperature', 'chunkStrategyLabel': 'Chunking Strategy', 'chunkStrategyDefault': 'Default', 'chunkStrategyAuto': 'Automatic', 'chunkStrategyManual': 'Manual',
+                'chunkCountManualLabel': 'Number of Chunks', 'requestDelayLabel': 'Request Delay (ms)', 'requestDelayNote': 'Delay between each API request (e.g., 4000 for 15 RPM).',
+                'useProxyLabel': 'Use Proxy', 'customProxyLabel': 'Custom Proxy URL (Optional)', 'customProxyNote': 'Deploy your own proxy using <a href="https://github.com/yebekhe/middleman" target="_blank" class="underline hover:text-primary-400">Middleman</a>.',
+                'promptSettingsTitle': 'Prompt & Separator Settings', 'customSeparatorLabel': 'Text Separator', 'customSeparatorNote': 'The string used to separate text lines. Use \\n for newlines.',
+                'translationToneLabel': 'Translation Tone', 'translationToneNote': 'e.g., formal, informal, humorous, dramatic.', 'customPromptLabel': 'Translation Prompt Template', 'customPromptNote': 'Use {LANG}, {TONE}, and {TEXT} as placeholders.',
+                'noCensorLabel': 'Add "uncensored" directive', 'noCensorNote': 'Appends a request to the prompt to not censor explicit content.', 'translateNow': 'Translate Now',
+                'progressTitle': 'Translation in Progress...', 'processingChunk': 'Processing chunk', 'progressComplete': 'Complete', 'progressEstimating': 'Estimating...', 'progressCalculating': 'Calculating...', 'progressRemaining': 'remaining',
+                'editTitle': 'Edit Your Translation', 'successTitle': 'Translation Complete!', 'successText': 'Your translated document is ready for editing and download.', 'errorTitle': 'An Error Occurred',
+                'startNew': 'Start New', 'downloadFile': 'Download File', 'retryFailed': 'Retry Failed Chunks:', 'retryButton': 'Retry Chunk', 'retryingButton': 'Retrying...',
+                'findReplace': 'Find/Replace', 'tableHeaderId': 'ID', 'tableHeaderOriginal': 'Original Text', 'tableHeaderTranslated': 'Translated Text (Editable)', 'tableHeaderAction': 'Action',
+                'logTitle': 'Live Log', 'logCopy': 'Copy', 'logCopied': 'Copied!', 'logClear': 'Clear',
+                'quotaModalTitle': 'Quota Reached', 'quotaModalLabel': 'Switch to a different API Key / Model combination:', 'quotaModalNote': 'The translation will resume from where it left off.',
+                'findReplaceTitle': 'Find and Replace', 'findLabel': 'Find', 'replaceLabel': 'Replace with', 'caseSensitiveLabel': 'Case sensitive', 'findNextBtn': 'Find Next', 'replaceBtn': 'Replace', 'replaceAllBtn': 'Replace All',
+                'switchAndContinueBtn': 'Switch and Continue', 'cancelTranslationBtn': 'Cancel Translation', 'clearMemoryConfirm': 'Are you sure you want to clear all saved translations from memory?',
+                'clearMemorySuccess': 'Translation memory cleared!', 'deleteKeyConfirm': 'Are you sure you want to delete the key "{keyName}"?', 'errorRequired': 'Both key name and value are required.', 'errorKeyExists': 'This API key has already been added.',
+                'errorNoFile': 'Please select a PDF file.', 'errorNoTranslatableText': 'No translatable text found in the PDF. Original content loaded in editor.', 'errorTranslationFailed': 'A critical error occurred: {error}', 'errorPdfParse': 'Failed to parse the PDF file. It might be corrupted or protected.',
+                'errorFindText': 'Please enter text to find.', 'errorFindEnd': 'End of document reached.', 'footerText': '<i class="fas fa-heart text-red-500 mx-1"></i>',
+            },
+            fa: {
+                'pageTitle': 'مترجم PDF', 'pageSubtitle': 'ترجمه اسناد با هوش مصنوعی', 'next': 'بعدی', 'back': 'قبلی', 'remove': 'حذف', 'clearMemory': 'پاک کردن حافظه ترجمه',
+                'step1Indicator': 'مرحله ۱', 'step1Name': 'تنظیم API', 'step2Indicator': 'مرحله ۲', 'step2Name': 'افزودن محتوا', 'step3Indicator': 'مرحله ۳', 'step3Name': 'ترجمه',
+                'step1Title': 'مرحله ۱: کلید API خود را پیکربندی کنید', 'step1Description': 'این ابزار از Gemini API استفاده می‌کند. لطفاً برای ادامه، کلید API خود را ارائه دهید. کلید شما به صورت محلی در مرورگرتان ذخیره می‌شود و هرگز به سرورهای ما ارسال نمی‌گردد.',
+                'selectApiKeyLabel': 'یک کلید API انتخاب کنید', 'addNewKeyTitle': 'افزودن کلید جدید', 'newKeyNameLabel': 'نام کلید (مثال: "شخصی"، "کاری")', 'newKeyValueLabel': 'مقدار کلید API',
+                'addKeyBtn': 'افزودن کلید', 'deleteKeyBtn': 'حذف کلید', 'noKeysAdded': 'هنوز کلیدی اضافه نشده است. یک کلید در پایین اضافه کنید.', 'getApiKeyLink': "کلید رایگان خود را از <a href='https://aistudio.google.com/app/apikey' target='_blank' class='font-medium underline hover:text-blue-600'>Google AI Studio</a> دریافت کنید.",
+                'step2Title': 'مرحله ۲: سند PDF خود را اضافه کنید', 'dropzone': "فایل PDF را بکشید و رها کنید", 'dropzoneOr': "یا", 'dropzoneChoose': "انتخاب فایل", 'fileSelected': "فایل انتخاب شد:",
+                'step3Title': 'مرحله ۳: نهایی‌سازی و ترجمه', 'targetLangLabel': 'زبان مقصد', 'targetLangPlaceholder': 'مثال: اسپانیایی، فرانسوی، ژاپنی',
+                'advancedSettings': 'تنظیمات پیشرفته', 'advancedWarning': 'تنظیم این پارامترها می‌تواند بر عملکرد، هزینه و کیفیت ترجمه تأثیر بگذارد. با احتیاط عمل کنید.',
+                'modelLabel': 'مدل هوش مصنوعی', 'temperatureLabel': 'دما (خلاقیت)', 'chunkStrategyLabel': 'استراتژی تقسیم‌بندی', 'chunkStrategyDefault': 'پیش‌فرض', 'chunkStrategyAuto': 'خودکار', 'chunkStrategyManual': 'دستی',
+                'chunkCountManualLabel': 'تعداد بخش‌ها', 'requestDelayLabel': 'تأخیر بین درخواست‌ها (ms)', 'requestDelayNote': 'تأخیر بین هر درخواست API (مثال: 4000 برای 15 RPM).',
+                'useProxyLabel': 'استفاده از پروکسی', 'customProxyLabel': 'آدرس پروکسی سفارشی (اختیاری)', 'customProxyNote': 'پروکسی خود را با استفاده از <a href="https://github.com/yebekhe/middleman" target="_blank" class="underline hover:text-primary-400">Middleman</a> راه‌اندازی کنید.',
+                'promptSettingsTitle': 'تنظیمات پرامپت و جداکننده', 'customSeparatorLabel': 'جداکننده متن', 'customSeparatorNote': 'رشته‌ای که برای جدا کردن خطوط متن ارسالی به هوش مصنوعی استفاده می‌شود. از \\n برای خط جدید استفاده کنید.',
+                'translationToneLabel': 'لحن ترجمه', 'translationToneNote': 'مثال: رسمی، غیر رسمی، طنزآمیز، دراماتیک.', 'customPromptLabel': 'قالب پرامپت ترجمه', 'customPromptNote': 'از {LANG}، {TONE} و {TEXT} به عنوان placeholder استفاده کنید.',
+                'noCensorLabel': 'افزودن دستور "بدون سانسور"', 'noCensorNote': 'درخواستی به پرامپت اضافه می‌کند تا محتوای صریح سانسور نشود.', 'translateNow': 'شروع ترجمه',
+                'progressTitle': 'در حال ترجمه...', 'processingChunk': 'پردازش بخش', 'progressComplete': 'تکمیل شد', 'progressEstimating': 'در حال تخمین...', 'progressCalculating': 'در حال محاسبه...', 'progressRemaining': 'باقیمانده',
+                'editTitle': 'ترجمه خود را ویرایش کنید', 'successTitle': 'ترجمه کامل شد!', 'successText': 'سند ترجمه شده شما برای ویرایش و دانلود آماده است.', 'errorTitle': 'خطایی روی داد',
+                'startNew': 'شروع ترجمه جدید', 'downloadFile': 'دانلود فایل', 'retryFailed': 'تلاش مجدد برای بخش‌های ناموفق:', 'retryButton': 'تلاش مجدد', 'retryingButton': 'در حال تلاش...',
+                'findReplace': 'یافتن/جایگزینی', 'tableHeaderId': 'شناسه', 'tableHeaderOriginal': 'متن اصلی', 'tableHeaderTranslated': 'متن ترجمه‌شده (قابل ویرایش)', 'tableHeaderAction': 'عملیات',
+                'logTitle': 'لاگ زنده', 'logCopy': 'کپی', 'logCopied': 'کپی شد!', 'logClear': 'پاک‌سازی',
+                'quotaModalTitle': 'محدودیت استفاده', 'quotaModalLabel': 'به یک ترکیب کلید API / مدل دیگر تغییر دهید:', 'quotaModalNote': 'ترجمه از جایی که متوقف شده بود ادامه خواهد یافت.',
+                'findReplaceTitle': 'یافتن و جایگزینی', 'findLabel': 'یافتن', 'replaceLabel': 'جایگزینی با', 'caseSensitiveLabel': 'حساس به حروف بزرگ و کوچک', 'findNextBtn': 'بعدی را بیاب', 'replaceBtn': 'جایگزین کن', 'replaceAllBtn': 'جایگزینی همه',
+                'switchAndContinueBtn': 'تغییر و ادامه', 'cancelTranslationBtn': 'لغو ترجمه', 'clearMemoryConfirm': 'آیا مطمئن هستید که می‌خواهید تمام ترجمه‌های ذخیره شده در حافظه را پاک کنید؟',
+                'clearMemorySuccess': 'حافظه ترجمه پاک شد!', 'deleteKeyConfirm': 'آیا از حذف کلید "{keyName}" مطمئن هستید؟', 'errorRequired': 'هر دو فیلد نام و مقدار کلید الزامی است.', 'errorKeyExists': 'این کلید API قبلاً اضافه شده است.',
+                'errorNoFile': 'لطفا یک فایل PDF انتخاب کنید.', 'errorNoTranslatableText': 'هیچ متن قابل ترجمه‌ای در PDF یافت نشد. محتوای اصلی در ویرایشگر بارگذاری شد.', 'errorTranslationFailed': 'یک خطای اساسی رخ داد: {error}',
+                'errorPdfParse': 'پردازش فایل PDF ناموفق بود. ممکن است فایل خراب یا محافظت شده باشد.', 'errorFindText': 'لطفا متنی برای یافتن وارد کنید.', 'errorFindEnd': 'به انتهای سند رسیدید.',
+                'footerText': 'ساخته شده با <i class="fas fa-heart text-red-500 mx-1"></i> توسط ',
+            }
+        };
+
+        const AVAILABLE_MODELS = ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash', 'gemini-2.0-flash-lite'];
+        let uiLang = 'en';
+        let uploadedFile = null;
+        let translationMemory = JSON.parse(localStorage.getItem('translationMemory') || '{}');
+        let savedApiKeys = [];
+        let currentStep = 1;
+        let firstChunkTime = 0;
+        let failedChunksData = [];
+        let translatedChunksData = [];
+        let currentOriginalFileName = 'translation';
+        let currentApiKey = '';
+        let currentModel = 'gemini-1.5-flash-latest';
+        let currentTemperature = 0.7;
+        let currentRequestDelay = 4000;
+        let currentTargetLangForRetry = '';
+        const proxyUrl = 'https://sbt.fxsinahamidi.workers.dev/';
+        let findState = { lastFoundRow: -1, lastFoundPos: -1, currentQuery: '' };
+        let sessionOverrides = {};
+
+        let htmlElement, languageToggle, clearMemoryButton, translateForm, dropzoneElement, useProxyCheckbox, togglePasswordBtn, langInput, modelSelect, temperatureInput, progressContainer, progressBar, progressText, chunkStatusSpan, timeEstimateSpan, errorMessageDiv;
+        let stepSections, stepIndicators, formContainer, resultsArea;
+        let nextToStep2Btn, nextToStep3Btn, backToStep1Btn, backToStep2Btns;
+        let fileInputContainer;
+        let fileFeedbackDiv, fileNameSpan, removeFileBtn, errorContentDiv;
+        let myDropzone;
+        let editorContainer, editorTbody, startNewFromEditorBtn;
+        let logViewerContainer, logOutput, toggleLogBtnEditor, toggleLogBtnProgress, copyLogBtn, clearLogBtn;
+        let chunkStrategyRadios, manualChunkContainer, chunkCountManualInput, requestDelayInput;
+        let modelSwitchModal, modelSwitchDialog, modalSwitchBtn, modalCancelBtn, modalComboSelect;
+        let separatorInput, promptTemplateInput, noCensorCheckbox, toneSelect, toneCustomInput;
+        let apiKeySelect, newKeyNameInput, newKeyValueInput, addKeyBtn, deleteKeyBtn;
+        let customProxyContainer, customProxyInput;
+        let findReplaceBtn, findReplaceModal, findReplaceDialog, findReplaceCloseBtn, findInput, replaceInput, caseSensitiveCheckbox, findNextBtn, replaceBtn, replaceAllBtn, findReplaceFeedback;
+
+
+        function updateLanguage(lang) {
+            uiLang = lang;
+            localStorage.setItem('language', lang);
+            const isRTL = lang === 'fa';
+            const translations = i18n[uiLang];
+
+            document.documentElement.lang = lang;
+            document.documentElement.dir = isRTL ? 'rtl' : 'ltr';
+            document.body.classList.toggle('lang-fa', isRTL);
+
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (translations[key]) el.textContent = translations[key];
+            });
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                const key = el.getAttribute('data-i18n-placeholder');
+                if (translations[key]) el.placeholder = translations[key];
+            });
+            document.querySelectorAll('[data-i18n-html]').forEach(el => {
+                const key = el.getAttribute('data-i18n-html');
+                if (translations[key]) el.innerHTML = translations[key];
+            });
+
+            document.querySelectorAll('.next-btn-icon').forEach(icon => {
+                icon.classList.toggle('fa-arrow-right', !isRTL);
+                icon.classList.toggle('fa-arrow-left', isRTL);
+            });
+            document.querySelectorAll('.back-btn-icon').forEach(icon => {
+                icon.classList.toggle('fa-arrow-left', !isRTL);
+                icon.classList.toggle('fa-arrow-right', isRTL);
+            });
+            loadApiKeys();
+        }
+
+        function goToStep(stepNumber) {
+            currentStep = stepNumber;
+            stepSections.forEach(section => section.classList.remove('active'));
+            document.getElementById(`step-${stepNumber}`)?.classList.add('active');
+            
+            stepIndicators.forEach((indicator, index) => {
+                const step = index + 1;
+                const textSpans = indicator.querySelectorAll('span');
+                indicator.className = 'group flex flex-col py-2 md:border-t-4 md:pt-4 md:pb-0';
+                if (document.documentElement.dir === 'rtl') {
+                    indicator.classList.add('border-e-4', 'pe-4', 'md:border-e-0', 'md:pe-0');
+                } else {
+                    indicator.classList.add('border-s-4', 'ps-4', 'md:border-s-0', 'md:ps-0');
+                }
+                textSpans.forEach(span => span.className = 'text-sm font-medium');
+
+                if (step < stepNumber) {
+                    indicator.classList.add('border-green-500');
+                    textSpans.forEach(span => span.classList.add('text-green-600', 'dark:text-green-400'));
+                } else if (step === stepNumber) {
+                    indicator.classList.add('border-primary-600');
+                    textSpans.forEach(span => span.classList.add('text-primary-600'));
+                } else {
+                    indicator.classList.add('border-gray-200', 'dark:border-gray-700');
+                    textSpans.forEach(span => span.classList.add('text-gray-500', 'dark:text-gray-400'));
+                }
+            });
+            window.scrollTo(0, 0);
+
+            if (stepNumber === 1) checkStep1Completion();
+            else if (stepNumber === 2) checkStep2Completion();
+        }
+
+        function checkStep1Completion() {
+            if (nextToStep2Btn) nextToStep2Btn.disabled = !currentApiKey;
+        }
+
+        function checkStep2Completion() {
+            if (nextToStep3Btn) nextToStep3Btn.disabled = uploadedFile === null;
+        }
+        
+        function resetWizard() {
+            if (resultsArea) resultsArea.style.display = 'none';
+            if (formContainer) formContainer.style.display = 'block';
+            if (editorContainer) editorContainer.style.display = 'none';
+            if (myDropzone) myDropzone.removeAllFiles(true);
+            goToStep(1);
+            checkStep1Completion();
+            checkStep2Completion();
+        }
+
+        function togglePasswordVisibility() {
+            const icon = togglePasswordBtn?.querySelector('i');
+            if (!icon || !newKeyValueInput) return;
+            if (newKeyValueInput.type === 'password') {
+                newKeyValueInput.type = 'text';
+                icon.classList.replace('fa-eye', 'fa-eye-slash');
+            } else {
+                newKeyValueInput.type = 'password';
+                icon.classList.replace('fa-eye-slash', 'fa-eye');
+            }
+        }
+        
+        function showError(message, type = 'error') {
+            if (!errorMessageDiv || !errorContentDiv) return;
+            const titleEl = errorMessageDiv.querySelector('h3');
+            const iconEl = errorMessageDiv.querySelector('i');
+            if (!message) {
+                errorMessageDiv.style.display = 'none';
+                return;
+            }
+
+            const isSuccess = type === 'success';
+            const isWarning = type === 'warn';
+            titleEl.textContent = isSuccess ? i18n[uiLang].successTitle : i18n[uiLang].errorTitle;
+            iconEl.className = `fas text-xl ${isSuccess ? 'fa-check-circle text-green-500' : isWarning ? 'fa-exclamation-triangle text-yellow-500' : 'fa-exclamation-circle text-red-500'}`;
+            errorMessageDiv.className = `mt-6 p-4 rounded-xl flex items-start border ${isSuccess ? 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700' : isWarning ? 'bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-700' : 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-700'}`;
+            titleEl.className = `text-md font-bold ${isSuccess ? 'text-green-800 dark:text-green-200' : isWarning ? 'text-yellow-800 dark:text-yellow-200' : 'text-red-800 dark:text-red-200'}`;
+            errorContentDiv.className = `text-sm mt-2 ${isSuccess ? 'text-green-700 dark:text-green-300' : isWarning ? 'text-yellow-700 dark:text-yellow-300' : 'text-red-700 dark:text-red-300'}`;
+
+            errorContentDiv.textContent = message;
+            errorMessageDiv.style.display = 'flex';
+        }
+
+        function hideError() {
+            if (errorMessageDiv) errorMessageDiv.style.display = 'none';
+        }
+
+        function resetUIForNewTranslation() {
+            if (progressContainer) progressContainer.style.display = 'block';
+            if (progressBar) progressBar.style.width = '0%';
+            if (progressText) progressText.textContent = `0% ${i18n[uiLang].progressComplete}`;
+            if (chunkStatusSpan) chunkStatusSpan.textContent = '...';
+            if (timeEstimateSpan) timeEstimateSpan.textContent = i18n[uiLang].progressEstimating;
+            
+            hideError();
+            document.getElementById('retry-container')?.remove();
+            if(editorContainer) editorContainer.style.display = 'none';
+            if(logViewerContainer) logViewerContainer.style.display = 'none';
+
+            failedChunksData = [];
+            translatedChunksData = [];
+        }
+
+        function updateProgress(chunkIndex, totalChunks, startTime) {
+            if (!progressContainer || progressContainer.style.display === 'none') return;
+            const currentDisplayChunk = chunkIndex + 1;
+            const progressPercentage = totalChunks > 0 ? Math.round((currentDisplayChunk / totalChunks) * 100) : 0;
+            progressBar.style.width = `${progressPercentage}%`;
+            progressText.textContent = `${progressPercentage}% ${i18n[uiLang].progressComplete}`;
+            chunkStatusSpan.textContent = `${i18n[uiLang].processingChunk} ${currentDisplayChunk}/${totalChunks}`;
+
+            if (startTime) {
+                timeEstimateSpan.textContent = i18n[uiLang].progressCalculating;
+            } else if (firstChunkTime > 0) {
+                const remainingChunks = totalChunks - currentDisplayChunk;
+                if (remainingChunks > 0) {
+                    const estimatedRemainingTime = remainingChunks * firstChunkTime;
+                    const minutes = Math.floor(estimatedRemainingTime / 60);
+                    const seconds = Math.floor(estimatedRemainingTime % 60);
+                    timeEstimateSpan.textContent = `~${minutes}m ${seconds}s ${i18n[uiLang].progressRemaining}`;
+                } else {
+                    timeEstimateSpan.textContent = i18n[uiLang].progressComplete;
+                }
+            }
+        }
+
+        function clearLog() { if (logOutput) logOutput.innerHTML = ''; }
+
+        function logMessage(message, type = 'info') {
+            if (!logOutput) return;
+            const now = new Date();
+            const timestamp = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+            const p = document.createElement('p');
+            let iconClass = 'fas fa-info-circle text-blue-400', messageColor = 'text-gray-300';
+            if (type === 'success') { iconClass = 'fas fa-check-circle text-green-400'; messageColor = 'text-green-300'; }
+            else if (type === 'warn') { iconClass = 'fas fa-exclamation-triangle text-yellow-400'; messageColor = 'text-yellow-300'; }
+            else if (type === 'error') { iconClass = 'fas fa-times-circle text-red-400'; messageColor = 'text-red-300'; }
+            p.innerHTML = `<span class="text-gray-500">${timestamp}</span> <i class="${iconClass} mx-2"></i> <span class="${messageColor}">${message}</span>`;
+            logOutput.appendChild(p);
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        let resolveModalPromise = null;
+
+        function showModelSwitchModal(failedModel, failedApiKey) {
+            return new Promise((resolve) => {
+                resolveModalPromise = resolve;
+                const modalMessage = modelSwitchModal.querySelector('#modal-message');
+                modalMessage.innerHTML = `You have reached your daily request limit for the model <strong>"${failedModel}"</strong> with the selected API key. Please choose a different combination to continue.`;
+                modalComboSelect.innerHTML = '';
+                let availableOptions = 0;
+                savedApiKeys.forEach(key => {
+                    AVAILABLE_MODELS.forEach(model => {
+                        if (key.value === failedApiKey && model === failedModel) return;
+                        const option = document.createElement('option');
+                        option.value = `${key.value}|${model}`;
+                        option.textContent = `${key.name} (${model})`;
+                        modalComboSelect.appendChild(option);
+                        availableOptions++;
+                    });
+                });
+                modalSwitchBtn.disabled = availableOptions === 0;
+                if (availableOptions === 0) modalComboSelect.innerHTML = `<option value="">No other combinations available</option>`;
+                modelSwitchModal.style.display = 'flex';
+                setTimeout(() => modelSwitchDialog.classList.add('opacity-100', 'scale-100'), 10);
+            });
+        }
+        
+        function hideModal() {
+            modelSwitchDialog.classList.remove('opacity-100', 'scale-100');
+            setTimeout(() => {
+                modelSwitchModal.style.display = 'none';
+                if (resolveModalPromise) { resolveModalPromise(null); resolveModalPromise = null; }
+            }, 200);
+        }
+
+        function loadApiKeys() {
+            savedApiKeys = JSON.parse(localStorage.getItem('apiKeys') || '[]');
+            const lastSelectedKey = localStorage.getItem('selectedApiKey');
+            apiKeySelect.innerHTML = '';
+            if (savedApiKeys.length === 0) {
+                apiKeySelect.innerHTML = `<option value="">${i18n[uiLang].noKeysAdded}</option>`;
+                currentApiKey = '';
+            } else {
+                savedApiKeys.forEach(key => {
+                    const option = document.createElement('option');
+                    option.value = key.value;
+                    option.textContent = key.name;
+                    if (key.value === lastSelectedKey) option.selected = true;
+                    apiKeySelect.appendChild(option);
+                });
+                if (!apiKeySelect.value && apiKeySelect.options.length > 0) apiKeySelect.options[0].selected = true;
+                currentApiKey = apiKeySelect.value;
+            }
+            deleteKeyBtn.disabled = savedApiKeys.length === 0;
+            checkStep1Completion();
+        }
+
+        function saveApiKeys() { localStorage.setItem('apiKeys', JSON.stringify(savedApiKeys)); }
+
+        function handleAddKey() {
+            const name = newKeyNameInput.value.trim();
+            const value = newKeyValueInput.value.trim();
+            if (!name || !value) { showError(i18n[uiLang].errorRequired); return; }
+            if (savedApiKeys.some(key => key.value === value)) { showError(i18n[uiLang].errorKeyExists); return; }
+            savedApiKeys.push({ name, value });
+            saveApiKeys();
+            localStorage.setItem('selectedApiKey', value);
+            newKeyNameInput.value = ''; newKeyValueInput.value = '';
+            loadApiKeys();
+            hideError();
+        }
+
+        function handleDeleteKey() {
+            const selectedValue = apiKeySelect.value;
+            if (!selectedValue) return;
+            const keyToDelete = savedApiKeys.find(key => key.value === selectedValue);
+            const confirmMsg = i18n[uiLang].deleteKeyConfirm.replace('{keyName}', keyToDelete.name);
+            if (confirm(confirmMsg)) {
+                savedApiKeys = savedApiKeys.filter(key => key.value !== selectedValue);
+                saveApiKeys();
+                if (localStorage.getItem('selectedApiKey') === selectedValue) localStorage.removeItem('selectedApiKey');
+                loadApiKeys();
+            }
+        }
+
+        function handleSelectKey() {
+            currentApiKey = apiKeySelect.value;
+            localStorage.setItem('selectedApiKey', currentApiKey);
+            checkStep1Completion();
+        }
+
+        function clearTranslationMemory() {
+            if (confirm(i18n[uiLang].clearMemoryConfirm)) {
+                translationMemory = {};
+                localStorage.removeItem('translationMemory');
+                alert(i18n[uiLang].clearMemorySuccess);
+            }
+        }
+
+        function findInTranslationMemory(text, lang) { return translationMemory[lang]?.[text.trim()]; }
+
+        function updateTranslationMemory(sourceText, translatedText, lang) {
+            if (!sourceText || !translatedText) return;
+            const trimmedSource = sourceText.trim();
+            if (!trimmedSource) return;
+            if (!translationMemory[lang]) translationMemory[lang] = {};
+            translationMemory[lang][trimmedSource] = translatedText.trim();
+            try { localStorage.setItem('translationMemory', JSON.stringify(translationMemory)); } catch (e) { console.error("Error saving to localStorage:", e); }
+        }
+
+        async function parsePdf(file) {
+            const fileReader = new FileReader();
+            const arrayBuffer = await new Promise((resolve, reject) => {
+                fileReader.onload = () => resolve(fileReader.result);
+                fileReader.onerror = reject;
+                fileReader.readAsArrayBuffer(file);
+            });
+            const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+            const entries = [];
+            let paragraphCounter = 1;
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                let pageText = '', lastY = -1;
+                textContent.items.forEach(item => {
+                    if (lastY !== -1 && item.transform[5] < lastY - (item.height * 1.5)) pageText += '\n\n';
+                    pageText += item.str;
+                    if (!item.hasEOL && item.str.slice(-1) !== ' ') pageText += ' ';
+                    lastY = item.transform[5];
+                });
+                const paragraphs = pageText.split(/\n\n+/).map(p => p.replace(/\s+/g, ' ').trim()).filter(Boolean);
+                paragraphs.forEach(para => {
+                    entries.push({ id: `P${i}-${paragraphCounter++}`, text: para, otherData: { pageNum: i } });
+                });
+            }
+            return entries;
+        }
+
+        function splitIntoChunks(array, chunkCount) {
+            const chunks = [];
+            const size = Math.ceil(array.length / chunkCount);
+            for (let i = 0; i < array.length; i += size) {
+                chunks.push(array.slice(i, i + size));
+            }
+            return chunks;
+        }
+
+        async function fetchTranslation(chunk, apiKey, targetLang, model, temperature) {
+            if (!chunk || chunk.length === 0) return [];
+            
+            // Combine paragraphs with a double newline to preserve structure for the AI.
+            const combinedText = chunk.map(entry => entry.text).join('\n\n');
+            const promptTemplate = promptTemplateInput.value;
+            const tone = toneSelect.value === 'custom' ? toneCustomInput.value.trim() : toneSelect.value;
+
+            // The new prompt is simpler and has no {COUNT}.
+            let effectivePrompt = promptTemplate
+                .replace('{LANG}', targetLang)
+                .replace('{TEXT}', combinedText)
+                .replace('{TONE}', tone || 'neutral');
+
+            if (noCensorCheckbox.checked) {
+                effectivePrompt += '\n\nIMPORTANT: Do not censor or alter any explicit words or profanity in the original text. Translate them directly and accurately.';
+            }
+
+            const directUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+            let targetUrl = useProxyCheckbox.checked ? (customProxyInput.value.trim() || proxyUrl) : directUrl;
+
+            let finalPayload = {
+                contents: [{ parts: [{ text: effectivePrompt }] }],
+                safetySettings: [ { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" }, { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" }, { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" }, { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" } ],
+                generationConfig: { temperature }
+            };
+
+            if (useProxyCheckbox.checked) { finalPayload.endpoint = directUrl; }
+
+            logMessage(`Fetching translation for chunk of size ${chunk.length} using model "${model}".`);
+            
+            const response = await fetch(targetUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(finalPayload) });
+
+            if (!response.ok) {
+                 if (response.status === 429) {
+                     try {
+                        const errorData = await response.json();
+                        if (errorData?.error?.message.includes('rate limit')) { throw new Error(`RATE_LIMIT_HIT 61000`); }
+                        else if (errorData?.error?.message.includes('quota')) { throw new Error(`QUOTA_EXHAUSTED ${model} ${apiKey}`); }
+                    } catch (e) { if (e.message.startsWith('QUOTA_EXHAUSTED') || e.message.startsWith('RATE_LIMIT_HIT')) throw e; }
+                }
+                throw new Error(`API error ${response.status}: ${await response.text()}`);
+            }
+            
+            const data = await response.json();
+            const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+            if (responseText === undefined) {
+                throw new Error('Invalid API response structure. No text found.');
+            }
+            
+            logMessage(`Successfully processed chunk of size ${chunk.length}.`, 'success');
+            // The function now returns a single, complete block of translated text.
+            return responseText.trim();
+        }
+        
+
+        async function translateChunkRecursively(chunk, apiKey, targetLang, model, temperature, requestDelay) {
+            try { return await fetchTranslation(chunk, apiKey, targetLang, model, temperature); } catch (error) {
+                if (error.message.startsWith('RATE_LIMIT_HIT')) {
+                    const waitMs = parseInt(error.message.split(' ')[1], 10);
+                    await new Promise(resolve => setTimeout(resolve, waitMs));
+                    return translateChunkRecursively(chunk, apiKey, targetLang, model, temperature, requestDelay);
+                } else if (error.message.startsWith('QUOTA_EXHAUSTED')) {
+                    const [, failedModel, failedApiKey] = error.message.split(' ');
+                    logMessage(`Daily quota exhausted for model: ${failedModel}.`, 'error');
+                    const userResponse = await showModelSwitchModal(failedModel, failedApiKey);
+                    if (userResponse && userResponse.choice === 'switch') {
+                        // THE FIX: Update the global variables to make the switch persistent
+                        currentApiKey = userResponse.newApiKey;
+                        currentModel = userResponse.newModel;
+                        logMessage(`Switched session to model "${currentModel}" for subsequent requests.`, 'success');
+
+                        sessionOverrides[`${failedApiKey}|${failedModel}`] = { newApiKey: userResponse.newApiKey, newModel: userResponse.newModel };
+                        return translateChunkRecursively(chunk, userResponse.newApiKey, targetLang, userResponse.newModel, temperature, requestDelay);
+                    } else throw new Error('Translation cancelled by user due to quota limit.');
+                } else throw error;
+            }
+        }
+
+        async function translateChunk(chunk, apiKey, targetLang, model, temperature, requestDelay) {
+            const override = sessionOverrides[`${apiKey}|${model}`];
+            let effectiveApiKey = override ? override.newApiKey : apiKey;
+            let effectiveModel = override ? override.newModel : model;
+
+            // New Caching Strategy: Check if the entire combined chunk exists in memory.
+            const combinedOriginalText = chunk.map(entry => entry.text).join('\n\n');
+            const cached = findInTranslationMemory(combinedOriginalText, targetLang);
+            if (cached) {
+                logMessage(`Chunk found in memory. Skipping API call.`);
+                // Still apply a small delay to prevent the UI from locking up on cached-only translations
+                await new Promise(resolve => setTimeout(resolve, 50)); 
+                return cached;
+            }
+            
+            // This function internally combines the chunk text and returns a single string block.
+            const translatedBlock = await translateChunkRecursively(chunk, effectiveApiKey, targetLang, effectiveModel, temperature, requestDelay);
+            
+            // Update memory with the new block-level translation.
+            updateTranslationMemory(combinedOriginalText, translatedBlock, targetLang);
+            
+            await new Promise(resolve => setTimeout(resolve, requestDelay));
+            
+            // CRITICAL FIX: Return the translated string directly.
+            return translatedBlock;
+        }
+
+        async function handleTranslate(event) {
+            event.preventDefault();
+            sessionOverrides = {};
+            formContainer.style.display = 'none';
+            resultsArea.style.display = 'block';
+            resetUIForNewTranslation();
+            clearLog();
+            logMessage('Translation process started.');
+
+            const targetLanguage = langInput.value.trim();
+            currentApiKey = apiKeySelect.value;
+            currentModel = modelSelect.value;
+            currentTemperature = parseFloat(temperatureInput.value);
+            currentRequestDelay = parseInt(requestDelayInput.value, 10) || 2000;
+            currentTargetLangForRetry = targetLanguage;
+
+            if (!uploadedFile) { showError(i18n[uiLang].errorNoFile); resetWizard(); return; }
+            currentOriginalFileName = uploadedFile.name.replace(/\.[^/.]+$/, "");
+            
+            const startTime = performance.now();
+            firstChunkTime = 0;
+
+            try {
+                logMessage(`Parsing PDF file: ${uploadedFile.name}...`);
+                const allParsedEntries = await parsePdf(uploadedFile);
+                logMessage(`Found ${allParsedEntries.length} text blocks (paragraphs).`);
+                
+                if (allParsedEntries.length === 0) {
+                    translatedChunksData = [];
+                    populateEditor();
+                    showError(i18n[uiLang].errorNoTranslatableText, 'success');
+                    logMessage('No translatable text found. Process finished.', 'success');
+                    return;
+                }
+
+                let chunkCount;
+                const chunkStrategy = document.querySelector('input[name="chunk_strategy"]:checked').value;
+                if (chunkStrategy === 'auto') chunkCount = Math.ceil(allParsedEntries.length / 25);
+                else if (chunkStrategy === 'manual') chunkCount = parseInt(chunkCountManualInput.value, 10) || 20;
+                else chunkCount = 20;
+                
+                const chunks = splitIntoChunks(allParsedEntries, chunkCount);
+                const totalChunks = chunks.length;
+                logMessage(`Splitting into ${totalChunks} actual chunks for processing.`);
+                
+                translatedChunksData = []; // Reset the data
+                updateProgress(-1, totalChunks, startTime);
+
+                for (let i = 0; i < totalChunks; i++) {
+                    updateProgress(i, totalChunks, i === 0 ? startTime : null);
+                    const currentChunk = chunks[i];
+                    const combinedOriginalText = currentChunk.map(entry => entry.text).join('\n\n');
+                    let translatedBlock = '';
+
+                    try {
+                        const chunkStartTime = performance.now();
+                        translatedBlock = await translateChunk(currentChunk, currentApiKey, targetLanguage, currentModel, currentTemperature, currentRequestDelay);
+                        if (i === 0 && totalChunks > 1) { firstChunkTime = (performance.now() - chunkStartTime) / 1000; logMessage(`First chunk took ${firstChunkTime.toFixed(1)}s. Estimating remaining time.`, 'info'); }
+                    } catch (chunkError) {
+                        logMessage(`Chunk ${i + 1} failed: ${chunkError.message}`, 'error');
+                        failedChunksData.push({ index: i, chunkData: currentChunk, reason: chunkError.message });
+                        // On failure, use the original text as the fallback
+                        translatedBlock = combinedOriginalText;
+                    }
+                    
+                    translatedChunksData.push({
+                        id: i,
+                        originalText: combinedOriginalText,
+                        translatedText: translatedBlock
+                    });
+                }
+                
+                logMessage('All chunks processed. Populating editor.');
+                populateEditor();
+                
+                if (failedChunksData.length > 0) { 
+                    showError(`Translation finished with ${failedChunksData.length} failed chunk(s).`, 'warn');
+                    logMessage(`Translation finished with ${failedChunksData.length} failed chunk(s).`, 'warn');
+                    displayRetryButtons(); 
+                } else { 
+                    showError(i18n[uiLang].successText, 'success');
+                    logMessage('Translation successful!', 'success');
+                }
+            } catch (error) {
+                progressContainer.style.display = 'none';
+                let errorMessage = error.message;
+                if (error instanceof pdfjsLib.PasswordException) errorMessage = "PDF is password protected.";
+                else if (error instanceof pdfjsLib.InvalidPDFException) errorMessage = "Invalid or corrupted PDF file.";
+                logMessage(`A critical error occurred: ${errorMessage}`, 'error');
+                showError(i18n[uiLang].errorTranslationFailed.replace('{error}', errorMessage));
+            }
+        }
+
+        function autoResizeTextarea(textarea) { textarea.style.height = 'auto'; textarea.style.height = (textarea.scrollHeight) + 'px'; }
+        function isRtl(text) { return /[\u0600-\u06FF\u0590-\u05FF]/.test(text); }
+        function isLanguageRtl(langName) { return ['persian', 'farsi', 'arabic', 'hebrew', 'urdu'].some(keyword => langName.toLowerCase().includes(keyword)); }
+
+        function populateEditor() {
+            if (!editorTbody) return;
+            editorTbody.innerHTML = '';
+            const targetLanguage = langInput.value.trim();
+            const isTargetRtl = isLanguageRtl(targetLanguage);
+
+            translatedChunksData.forEach((chunkData, index) => {
+                const tr = document.createElement('tr');
+                tr.className = 'bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600';
+                tr.dataset.index = index;
+                
+                const isOriginalRtl = isRtl(chunkData.originalText);
+
+                tr.innerHTML = `
+                    <td class="px-4 py-2 text-center font-medium text-gray-900 dark:text-white">${index + 1}</td>
+                    <td class="px-6 py-2">
+                        <textarea readonly class="w-full p-1 bg-gray-100 dark:bg-gray-900 border-0 rounded-md overflow-hidden" style="direction: ${isOriginalRtl ? 'rtl' : 'ltr'}; text-align: ${isOriginalRtl ? 'right' : 'left'};" rows="1">${chunkData.originalText}</textarea>
+                    </td>
+                    <td class="px-6 py-2">
+                        <textarea class="w-full p-1 bg-transparent border-0 rounded-md focus:ring-2 focus:ring-primary-500 overflow-hidden" style="direction: ${isTargetRtl ? 'rtl' : 'ltr'}; text-align: ${isTargetRtl ? 'right' : 'left'};" rows="1">${chunkData.translatedText}</textarea>
+                    </td>
+                    <td class="px-4 py-2 text-center"><button class="retranslate-btn text-gray-400 hover:text-primary-500"><i class="fas fa-sync-alt"></i></button></td>`;
+                
+                const originalTextarea = tr.querySelector('textarea[readonly]');
+                const translatedTextarea = tr.querySelector('textarea:not([readonly])');
+
+                translatedTextarea.addEventListener('input', function() {
+                    autoResizeTextarea(this);
+                    translatedChunksData[this.closest('tr').dataset.index].translatedText = this.value;
+                });
+
+                editorTbody.appendChild(tr);
+                // Auto-resize both textareas after they are added to the DOM
+                setTimeout(() => {
+                    autoResizeTextarea(originalTextarea);
+                    autoResizeTextarea(translatedTextarea);
+                }, 0);
+            });
+            progressContainer.style.display = 'none';
+            editorContainer.style.display = 'block';
+        }
+        
+        function generateTxtDownload() {
+            try {
+                const targetLang = currentTargetLangForRetry || langInput.value.trim();
+                
+                const finalContent = translatedChunksData.map(chunk => {
+                    // Clean the text by removing empty or whitespace-only lines
+                    return chunk.translatedText
+                        .split('\n')
+                        .filter(line => line.trim() !== '')
+                        .join('\n');
+                }).join('\n\n---\n\n');
+
+                const blob = new Blob([finalContent], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.style.display = 'none'; a.href = url; a.download = `${currentOriginalFileName}_${targetLang}.txt`;
+                document.body.appendChild(a); a.click(); URL.revokeObjectURL(url); a.remove();
+            } catch (error) { console.error("Error generating TXT file:", error); showError(`Could not generate the TXT file.`); }
+        }
+
+        async function generateReflowedPdfDownload() {
+            const { PDFDocument, rgb } = PDFLib;
+            try {
+                logMessage('Starting PDF generation...');
+                const pdfDoc = await PDFDocument.create();
+                pdfDoc.registerFontkit(fontkit);
+                const fontUrl = 'https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@latest/fonts/ttf/Vazirmatn-Regular.ttf';
+                const fontBytes = await fetch(fontUrl).then(res => res.arrayBuffer());
+                const customFont = await pdfDoc.embedFont(fontBytes);
+                logMessage('Font embedded successfully.');
+
+                let currentPage = pdfDoc.addPage();
+                const { width, height } = currentPage.getSize();
+                const margin = 50;
+                let y = height - margin;
+                const defaultFontSize = 11;
+                const textMaxWidth = width - 2 * margin;
+
+                function wrapText(text, font, size, maxWidth) {
+                    const lines = []; let currentLine = ''; const words = text.replace(/\n/g, ' \n ').split(' ');
+                    for (const word of words) {
+                        if (word === '\n') { lines.push(currentLine); currentLine = ''; continue; }
+                        const potentialLine = currentLine === '' ? word : `${currentLine} ${word}`;
+                        if (font.widthOfTextAtSize(potentialLine, size) < maxWidth) { currentLine = potentialLine; } 
+                        else { lines.push(currentLine); currentLine = word; }
+                    }
+                    lines.push(currentLine); return lines;
+                }
+                
+                for (const chunkData of translatedChunksData) {
+                    // Clean the text by filtering out empty or whitespace-only lines
+                    const translatedLines = chunkData.translatedText
+                        .split('\n')
+                        .filter(line => line.trim() !== '');
+
+                    for (const line of translatedLines) {
+                        const wrappedLines = wrapText(line, customFont, defaultFontSize, textMaxWidth);
+                        for(const wrapped of wrappedLines) {
+                            if (y < margin) { currentPage = pdfDoc.addPage(); y = currentPage.getHeight() - margin; }
+                            const isLineRtl = isRtl(wrapped);
+                            const lineWidth = customFont.widthOfTextAtSize(wrapped, defaultFontSize);
+                            const x = isLineRtl ? width - margin - lineWidth : margin;
+                            currentPage.drawText(wrapped, { x, y, font: customFont, size: defaultFontSize, color: rgb(0, 0, 0), lineHeight: 15 });
+                            y -= 15;
+                        }
+                    }
+                    y -= 10; // Reduced space between chunks for a tighter look
+                }
+                const pdfBytes = await pdfDoc.save();
+                logMessage('PDF generation complete. Triggering download.');
+                const targetLang = currentTargetLangForRetry || langInput.value.trim();
+                const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.style.display = 'none'; a.href = url; a.download = `${currentOriginalFileName}_${targetLang}.pdf`;
+                document.body.appendChild(a); a.click(); URL.revokeObjectURL(url); a.remove();
+            } catch (error) { console.error("Error generating PDF:", error); showError(`Could not generate the PDF file: ${error.message}`); }
+        }
+        
+        async function generateDocxDownload() {
+            try {
+                const { Document, Packer, Paragraph, TextRun, AlignmentType } = docx;
+                logMessage('Starting DOCX generation...');
+                
+                const paragraphs = translatedChunksData.flatMap(chunkData => {
+                    // Clean the text by filtering out empty or whitespace-only lines
+                    return chunkData.translatedText
+                        .split('\n')
+                        .filter(line => line.trim() !== '')
+                        .map(textLine => {
+                            const isTextRtl = isRtl(textLine);
+                            return new Paragraph({
+                                children: [new TextRun(textLine)],
+                                alignment: isTextRtl ? AlignmentType.RIGHT : AlignmentType.LEFT,
+                                bidirectional: true
+                            });
+                        });
+                });
+
+                const doc = new Document({ sections: [{ children: paragraphs }] });
+                const blob = await Packer.toBlob(doc);
+                logMessage('DOCX generation complete. Triggering download.');
+                const targetLang = currentTargetLangForRetry || langInput.value.trim();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.style.display = 'none'; a.href = url; a.download = `${currentOriginalFileName}_${targetLang}.docx`;
+                document.body.appendChild(a); a.click(); URL.revokeObjectURL(url); a.remove();
+            } catch (error) { console.error("Error generating DOCX:", error); showError(`Could not generate the DOCX file: ${error.message}`); }
+        }
+        
+        function displayRetryButtons() {
+            let retryContainer = document.getElementById('retry-container');
+            if (!retryContainer) {
+                retryContainer = document.createElement('div');
+                retryContainer.id = 'retry-container';
+                retryContainer.className = 'mt-6 p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 rounded-lg';
+                editorContainer.insertAdjacentElement('afterend', retryContainer);
+            }
+            retryContainer.innerHTML = `<p class="text-lg font-medium text-blue-800 dark:text-blue-200 mb-3">${i18n[uiLang].retryFailed}</p>`;
+            const buttonsContainer = document.createElement('div');
+            buttonsContainer.className = 'flex flex-wrap gap-2';
+            failedChunksData.forEach(failedChunk => {
+                const button = document.createElement('button');
+                button.className = 'px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg';
+                button.dataset.chunkIndex = failedChunk.index;
+                button.textContent = `${i18n[uiLang].retryButton} ${failedChunk.index + 1}`;
+                button.addEventListener('click', handleManualRetry);
+                buttonsContainer.appendChild(button);
+            });
+            retryContainer.appendChild(buttonsContainer);
+        }
+
+        async function handleManualRetry(event) {
+            const button = event.target; button.disabled = true; button.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i> ${i18n[uiLang].retryingButton}`;
+            const internalChunkIndex = parseInt(button.dataset.chunkIndex, 10);
+            const failedChunkInfo = failedChunksData.find(fc => fc.index === internalChunkIndex);
+            if (!failedChunkInfo) return;
+            try {
+                const translatedTexts = await translateChunk(failedChunkInfo.chunkData, currentApiKey, currentTargetLangForRetry, currentModel, currentTemperature, currentRequestDelay);
+                failedChunkInfo.chunkData.forEach((entry, idx) => { const globalEntry = currentAllTranslatedEntries.find(e => e.id === entry.id); if(globalEntry) globalEntry.text = translatedTexts[idx] || entry.text; });
+                failedChunksData = failedChunksData.filter(fc => fc.index !== internalChunkIndex);
+                showError(`Chunk ${internalChunkIndex + 1} successfully translated!`, 'success');
+                button.remove(); populateEditor();
+                if (failedChunksData.length === 0) document.getElementById('retry-container')?.remove();
+            } catch (retryError) {
+                showError(`Retry failed for Chunk ${internalChunkIndex + 1}: ${retryError.message}`);
+                button.disabled = false; button.textContent = `${i18n[uiLang].retryButton} ${internalChunkIndex + 1}`;
+            }
+        }
+        
+        async function handleIndividualRetranslate(button) {
+            const icon = button.querySelector('i');
+            const tr = button.closest('tr');
+            if (!tr) return;
+
+            const chunkIndex = parseInt(tr.dataset.index, 10);
+            const chunkData = translatedChunksData[chunkIndex];
+            const originalText = chunkData.originalText;
+
+            if (!originalText) { showError("No original text found for this chunk."); return; }
+            
+            icon.classList.add('fa-spin');
+            button.disabled = true;
+
+            try {
+                // Since `translateChunk` expects an array of paragraph objects, we'll create a dummy one.
+                const dummyChunk = [{ text: originalText }]; 
+                const newTranslatedBlock = await translateChunkRecursively(dummyChunk, currentApiKey, currentTargetLangForRetry, currentModel, currentTemperature, 0);
+
+                if (newTranslatedBlock) {
+                    const translatedTextarea = tr.querySelector('textarea:not([readonly])');
+                    translatedTextarea.value = newTranslatedBlock;
+                    translatedChunksData[chunkIndex].translatedText = newTranslatedBlock;
+                    autoResizeTextarea(translatedTextarea);
+                }
+            } catch (error) {
+                showError(`Failed to re-translate chunk: ${error.message}`);
+            } finally {
+                icon.classList.remove('fa-spin');
+                button.disabled = false;
+            }
+        }
+
+        function showFindReplaceModal() {
+            findState = { lastFoundRow: -1, lastFoundPos: -1, currentQuery: '' };
+            findReplaceFeedback.textContent = '';
+            findReplaceModal.style.display = 'flex';
+            setTimeout(() => { findReplaceDialog.classList.add('opacity-100', 'scale-100'); findInput.focus(); }, 10);
+        }
+
+        function hideFindReplaceModal() {
+            findReplaceDialog.classList.remove('opacity-100', 'scale-100');
+            setTimeout(() => findReplaceModal.style.display = 'none', 200);
+        }
+
+        function handleFindNext() {
+            const query = findInput.value; if (!query) { findReplaceFeedback.textContent = i18n[uiLang].errorFindText; return; }
+            if (query !== findState.currentQuery) findState = { lastFoundRow: -1, lastFoundPos: -1, currentQuery: query };
+            const rows = Array.from(editorTbody.querySelectorAll('tr[data-index]'));
+            for (let i = 0; i < rows.length; i++) {
+                let rowIndex = (findState.lastFoundRow + i) % rows.length;
+                if(i === 0 && findState.lastFoundRow !== -1) rowIndex = findState.lastFoundRow;
+                const textarea = rows[rowIndex].querySelector('textarea'), searchFrom = (rowIndex === findState.lastFoundRow) ? findState.lastFoundPos + 1 : 0;
+                const pos = caseSensitiveCheckbox.checked ? textarea.value.indexOf(query, searchFrom) : textarea.value.toLowerCase().indexOf(query.toLowerCase(), searchFrom);
+                if (pos !== -1) {
+                    findState.lastFoundRow = rowIndex; findState.lastFoundPos = pos;
+                    rows[rowIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    textarea.focus(); textarea.setSelectionRange(pos, pos + query.length);
+                    findReplaceFeedback.textContent = ''; return;
+                }
+            }
+            findReplaceFeedback.textContent = i18n[uiLang].errorFindEnd;
+            findState = { lastFoundRow: -1, lastFoundPos: -1, currentQuery: query };
+        }
+
+        function handleReplace() {
+            const rows = Array.from(editorTbody.querySelectorAll('tr[data-index]'));
+            if (findState.lastFoundRow === -1 || !findInput.value) { handleFindNext(); return; }
+            const row = rows[findState.lastFoundRow]; if (!row) return;
+            const textarea = row.querySelector('textarea'), query = findInput.value, replacement = replaceInput.value, selectedText = textarea.value.substring(textarea.selectionStart, textarea.selectionEnd);
+            const queryToCheck = caseSensitiveCheckbox.checked ? query : query.toLowerCase();
+            if ((caseSensitiveCheckbox.checked ? selectedText : selectedText.toLowerCase()) === queryToCheck) {
+                textarea.value = textarea.value.substring(0, textarea.selectionStart) + replacement + textarea.value.substring(textarea.selectionEnd);
+                textarea.dispatchEvent(new Event('input'));
+                findState.lastFoundPos = textarea.selectionStart + replacement.length -1;
+            }
+            handleFindNext();
+        }
+
+        function handleReplaceAll() {
+            const query = findInput.value; if (!query) { findReplaceFeedback.textContent = i18n[uiLang].errorFindText; return; }
+            const replacement = replaceInput.value;
+            const flags = caseSensitiveCheckbox.checked ? 'g' : 'gi';
+            const regex = new RegExp(query.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), flags);
+            let count = 0;
+            editorTbody.querySelectorAll('textarea').forEach(textarea => { const matches = textarea.value.match(regex); if (matches) { count += matches.length; textarea.value = textarea.value.replace(regex, replacement); textarea.dispatchEvent(new Event('input')); } });
+            findReplaceFeedback.textContent = `Replaced ${count} occurrence(s).`;
+            findState = { lastFoundRow: -1, lastFoundPos: -1, currentQuery: '' };
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            htmlElement = document.documentElement;
+            languageToggle = document.getElementById('languageToggle');
+            clearMemoryButton = document.getElementById('clear-memory-button');
+            translateForm = document.getElementById('translate-form');
+            dropzoneElement = document.getElementById('dropzone-upload');
+            useProxyCheckbox = document.getElementById('useProxyCheckbox');
+            togglePasswordBtn = document.getElementById('togglePasswordBtn');
+            langInput = document.getElementById('lang-input');
+            modelSelect = document.getElementById('model');
+            temperatureInput = document.getElementById('temperature');
+            progressContainer = document.getElementById('progress-container');
+            progressBar = document.getElementById('progress');
+            progressText = document.getElementById('progress-text');
+            chunkStatusSpan = document.getElementById('chunk-status');
+            timeEstimateSpan = document.getElementById('time-estimate');
+            errorMessageDiv = document.getElementById('error-message');
+            errorContentDiv = errorMessageDiv.querySelector('.text-sm');
+            formContainer = document.getElementById('form-container');
+            resultsArea = document.getElementById('results-area');
+            stepSections = document.querySelectorAll('[data-step]');
+            stepIndicators = document.querySelectorAll('[id^="step-"][id$="-indicator"]');
+            nextToStep2Btn = document.getElementById('next-to-step-2');
+            nextToStep3Btn = document.getElementById('next-to-step-3');
+            backToStep1Btn = document.getElementById('back-to-step-1');
+            backToStep2Btns = document.querySelectorAll('#back-to-step-2');
+            fileInputContainer = document.getElementById('file-input-container');
+            fileFeedbackDiv = document.getElementById('file-feedback');
+            fileNameSpan = document.getElementById('file-name');
+            removeFileBtn = document.getElementById('remove-file');
+            editorContainer = document.getElementById('editor-container');
+            editorTbody = document.getElementById('editor-tbody');
+            startNewFromEditorBtn = document.getElementById('start-new-from-editor-btn');
+            logViewerContainer = document.getElementById('log-viewer-container');
+            logOutput = document.getElementById('log-output');
+            toggleLogBtnEditor = document.getElementById('toggle-log-btn-editor');
+            toggleLogBtnProgress = document.getElementById('toggle-log-btn-progress');
+            copyLogBtn = document.getElementById('copy-log-btn');
+            clearLogBtn = document.getElementById('clear-log-btn');
+            chunkStrategyRadios = document.querySelectorAll('input[name="chunk_strategy"]');
+            manualChunkContainer = document.getElementById('manual_chunk_container');
+            chunkCountManualInput = document.getElementById('chunk_count_manual');
+            requestDelayInput = document.getElementById('request-delay');
+            modelSwitchModal = document.getElementById('model-switch-modal');
+            modelSwitchDialog = document.getElementById('model-switch-dialog');
+            modalSwitchBtn = document.getElementById('modal-switch-btn');
+            modalCancelBtn = document.getElementById('modal-cancel-btn');
+            modalComboSelect = document.getElementById('modal-combo-select');
+            separatorInput = document.getElementById('separator-input');
+            promptTemplateInput = document.getElementById('prompt-template-input');
+            noCensorCheckbox = document.getElementById('no-censor-checkbox');
+            toneSelect = document.getElementById('tone-select');
+            toneCustomInput = document.getElementById('tone-custom-input');
+            apiKeySelect = document.getElementById('api-key-select');
+            newKeyNameInput = document.getElementById('new-key-name');
+            newKeyValueInput = document.getElementById('new-key-value');
+            addKeyBtn = document.getElementById('add-key-btn');
+            deleteKeyBtn = document.getElementById('delete-key-btn');
+            customProxyContainer = document.getElementById('custom-proxy-container');
+            customProxyInput = document.getElementById('custom-proxy-input');
+            findReplaceBtn = document.getElementById('find-replace-btn');
+            findReplaceModal = document.getElementById('find-replace-modal');
+            findReplaceDialog = document.getElementById('find-replace-dialog');
+            findReplaceCloseBtn = document.getElementById('find-replace-close-btn');
+            findInput = document.getElementById('find-input');
+            replaceInput = document.getElementById('replace-input');
+            caseSensitiveCheckbox = document.getElementById('case-sensitive-checkbox');
+            findNextBtn = document.getElementById('find-next-btn');
+            replaceBtn = document.getElementById('replace-btn');
+            replaceAllBtn = document.getElementById('replace-all-btn');
+            findReplaceFeedback = document.getElementById('find-replace-feedback');
+            pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.worker.min.mjs`;
+            loadApiKeys();
+            updateLanguage(localStorage.getItem('language') === 'fa' ? 'fa' : 'en');
+            goToStep(1);
+            languageToggle.addEventListener('click', () => updateLanguage(uiLang === 'en' ? 'fa' : 'en'));
+            toneSelect.addEventListener('change', () => {
+                if (toneSelect.value === 'custom') {
+                    toneCustomInput.classList.remove('hidden');
+                    toneCustomInput.focus();
+                } else {
+                    toneCustomInput.classList.add('hidden');
+                }
+            });
+            clearMemoryButton.addEventListener('click', clearTranslationMemory);
+            togglePasswordBtn.addEventListener('click', togglePasswordVisibility);
+            addKeyBtn.addEventListener('click', handleAddKey);
+            deleteKeyBtn.addEventListener('click', handleDeleteKey);
+            apiKeySelect.addEventListener('change', handleSelectKey);
+            nextToStep2Btn.addEventListener('click', () => goToStep(2));
+            nextToStep3Btn.addEventListener('click', () => goToStep(3));
+            backToStep1Btn.addEventListener('click', () => goToStep(1));
+            backToStep2Btns.forEach(btn => btn.addEventListener('click', () => goToStep(2)));
+            removeFileBtn.addEventListener('click', () => myDropzone.removeAllFiles(true));
+            translateForm.addEventListener('submit', handleTranslate);
+            startNewFromEditorBtn.addEventListener('click', resetWizard);
+            const toggleLog = () => { logViewerContainer.style.display = logViewerContainer.style.display === 'none' ? 'block' : 'none'; };
+            toggleLogBtnEditor.addEventListener('click', toggleLog);
+            toggleLogBtnProgress.addEventListener('click', toggleLog);
+            clearLogBtn.addEventListener('click', clearLog);
+            copyLogBtn.addEventListener('click', () => { navigator.clipboard.writeText(logOutput.innerText).then(() => { const originalText = i18n[uiLang].logCopy; copyLogBtn.querySelector('span').textContent = i18n[uiLang].logCopied; setTimeout(() => { copyLogBtn.querySelector('span').textContent = originalText; }, 4000); }); });
+            chunkStrategyRadios.forEach(radio => radio.addEventListener('change', (e) => { manualChunkContainer.style.display = e.target.value === 'manual' ? 'block' : 'none'; }));
+            modalSwitchBtn.addEventListener('click', () => { if (resolveModalPromise) { const [newApiKey, newModel] = modalComboSelect.value.split('|'); resolveModalPromise({ choice: 'switch', newModel, newApiKey }); resolveModalPromise=null; hideModal();} });
+            modalCancelBtn.addEventListener('click', () => { if(resolveModalPromise) { resolveModalPromise({ choice: 'cancel' }); resolveModalPromise=null; hideModal(); } });
+            modelSwitchModal.addEventListener('click', (e) => { if (e.target === modelSwitchModal) hideModal(); });
+            useProxyCheckbox.addEventListener('change', (e) => { customProxyContainer.style.display = e.target.checked ? 'block' : 'none'; });
+            if (dropzoneElement) {
+                myDropzone = new Dropzone(fileInputContainer, {
+                    url: "#", autoProcessQueue: false, acceptedFiles: ".pdf", maxFiles: 1, clickable: ['#dropzone-upload', '#choose-file-btn'], previewsContainer: false,
+                    init: function() {
+                        this.on("addedfile", file => { if (this.files.length > 1) this.removeFile(this.files[0]); uploadedFile = file; dropzoneElement.style.display = 'none'; fileFeedbackDiv.style.display = 'flex'; fileNameSpan.textContent = file.name; checkStep2Completion(); });
+                        this.on("removedfile", () => { uploadedFile = null; dropzoneElement.style.display = 'block'; fileFeedbackDiv.style.display = 'none'; checkStep2Completion(); });
+                        this.on("error", (f, e) => { showError(typeof e === 'string' ? e : "Invalid file type."); this.removeFile(f); });
+                    }
+                });
+            }
+            editorTbody.addEventListener('click', e => { if (e.target.closest('.retranslate-btn')) handleIndividualRetranslate(e.target.closest('.retranslate-btn')); });
+            findReplaceBtn.addEventListener('click', showFindReplaceModal);
+            findReplaceCloseBtn.addEventListener('click', hideFindReplaceModal);
+            findReplaceModal.addEventListener('click', (e) => { if (e.target === findReplaceModal) hideFindReplaceModal(); });
+            findNextBtn.addEventListener('click', handleFindNext);
+            replaceBtn.addEventListener('click', handleReplace);
+            replaceAllBtn.addEventListener('click', handleReplaceAll);
+            findInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleFindNext(); });
+            const downloadBtnContainer = document.getElementById('download-btn-container');
+            const downloadDropdownToggle = document.getElementById('download-dropdown-toggle');
+            const downloadDropdownMenu = document.getElementById('download-dropdown-menu');
+            const downloadDocxBtn = document.getElementById('download-docx-btn');
+            const downloadPdfBtn = document.getElementById('download-pdf-btn');
+            const downloadTxtBtn = document.getElementById('download-txt-btn');
+            downloadDropdownToggle.addEventListener('click', () => { downloadDropdownMenu.classList.toggle('hidden'); });
+            window.addEventListener('click', (event) => { if (!downloadBtnContainer.contains(event.target)) { downloadDropdownMenu.classList.add('hidden'); } });
+            downloadDocxBtn.addEventListener('click', (e) => { e.preventDefault(); generateDocxDownload(); downloadDropdownMenu.classList.add('hidden'); });
+            downloadPdfBtn.addEventListener('click', (e) => { e.preventDefault(); generateReflowedPdfDownload(); downloadDropdownMenu.classList.add('hidden'); });
+            downloadTxtBtn.addEventListener('click', (e) => { e.preventDefault(); generateTxtDownload(); downloadDropdownMenu.classList.add('hidden'); });
+        });
+    </script>
+
+</body>
+</html>
