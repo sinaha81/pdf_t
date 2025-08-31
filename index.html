@@ -217,7 +217,7 @@
                                </div>
                                <div id="custom-proxy-container" class="hidden">
                                     <label for="custom-proxy-input" class="block text-sm font-medium" data-i18n="customProxyLabel">Custom Proxy URL (Optional)</label>
-                                    <input type="url" id="custom-proxy-input" placeholder="https://your-proxy.workers.dev/" class="mt-1 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg w-full p-2.5 dark:bg-gray-700 dark:border-gray-600" value="https://sbt.fxsinahamidi.workers.dev/">
+                                    <input type="url" id="custom-proxy-input" placeholder="https://your-proxy.workers.dev/" class="mt-1 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg w-full p-2.5 dark:bg-gray-700 dark:border-gray-600" value="https://middleman.yebekhe.workers.dev">
                                     <p class="text-xs text-gray-500 mt-1" data-i18n-html="customProxyNote">Deploy your own proxy using <a href="https://github.com/yebekhe/middleman" target="_blank" class="underline hover:text-primary-400">Middleman</a>.</p>
                                </div>
                                <!-- Prompt Settings -->
@@ -247,8 +247,9 @@
                                             <label for="prompt-template-input" class="block mb-1 text-sm" data-i18n="customPromptLabel">Translation Prompt Template</label>
                                             <textarea id="prompt-template-input" rows="5" class="w-full bg-gray-50 border border-gray-300 text-sm rounded-lg p-2 dark:bg-gray-700 dark:border-gray-600">You are an expert translator. Your task is to translate the entire text block below to {LANG} with a {TONE} tone.
 
-Preserve the original paragraph structure and formatting (like line breaks) as best as you can.
-Your response MUST contain ONLY the translated text, without any additional explanations, greetings, or commentary.
+Ensure the translation accurately conveys the meaning and intent of the original text while adhering to the specified tone. 
+Consider cultural nuances and idiomatic expressions where appropriate.
+Provide the translated text only, without any surrounding commentary or explanations.
                                                 
 Original Text:
 {TEXT}</textarea>
@@ -392,7 +393,7 @@ Original Text:
                     <i class="fas fa-broom me-1"></i> <span data-i18n="clearMemory">Clear Translation Memory</span>
                 </button>
             </div>
-            <p data-i18n-html="footerText"><i class="fas fa-heart text-red-500 mx-1"></i>  </p>
+            <p data-i18n-html="footerText">Created with <i class="fas fa-heart text-red-500 mx-1"></i> by YEBEKHE</p>
         </footer>
     </div>
 
@@ -474,7 +475,7 @@ Original Text:
                 'switchAndContinueBtn': 'Switch and Continue', 'cancelTranslationBtn': 'Cancel Translation', 'clearMemoryConfirm': 'Are you sure you want to clear all saved translations from memory?',
                 'clearMemorySuccess': 'Translation memory cleared!', 'deleteKeyConfirm': 'Are you sure you want to delete the key "{keyName}"?', 'errorRequired': 'Both key name and value are required.', 'errorKeyExists': 'This API key has already been added.',
                 'errorNoFile': 'Please select a PDF file.', 'errorNoTranslatableText': 'No translatable text found in the PDF. Original content loaded in editor.', 'errorTranslationFailed': 'A critical error occurred: {error}', 'errorPdfParse': 'Failed to parse the PDF file. It might be corrupted or protected.',
-                'errorFindText': 'Please enter text to find.', 'errorFindEnd': 'End of document reached.', 'footerText': '<i class="fas fa-heart text-red-500 mx-1"></i>',
+                'errorFindText': 'Please enter text to find.', 'errorFindEnd': 'End of document reached.', 'footerText': 'Created with <i class="fas fa-heart text-red-500 mx-1"></i> by YEBEKHE',
             },
             fa: {
                 'pageTitle': 'مترجم PDF', 'pageSubtitle': 'ترجمه اسناد با هوش مصنوعی', 'next': 'بعدی', 'back': 'قبلی', 'remove': 'حذف', 'clearMemory': 'پاک کردن حافظه ترجمه',
@@ -502,7 +503,7 @@ Original Text:
                 'clearMemorySuccess': 'حافظه ترجمه پاک شد!', 'deleteKeyConfirm': 'آیا از حذف کلید "{keyName}" مطمئن هستید؟', 'errorRequired': 'هر دو فیلد نام و مقدار کلید الزامی است.', 'errorKeyExists': 'این کلید API قبلاً اضافه شده است.',
                 'errorNoFile': 'لطفا یک فایل PDF انتخاب کنید.', 'errorNoTranslatableText': 'هیچ متن قابل ترجمه‌ای در PDF یافت نشد. محتوای اصلی در ویرایشگر بارگذاری شد.', 'errorTranslationFailed': 'یک خطای اساسی رخ داد: {error}',
                 'errorPdfParse': 'پردازش فایل PDF ناموفق بود. ممکن است فایل خراب یا محافظت شده باشد.', 'errorFindText': 'لطفا متنی برای یافتن وارد کنید.', 'errorFindEnd': 'به انتهای سند رسیدید.',
-                'footerText': 'ساخته شده با <i class="fas fa-heart text-red-500 mx-1"></i> توسط ',
+                'footerText': 'ساخته شده با <i class="fas fa-heart text-red-500 mx-1"></i> توسط YEBEKHE',
             }
         };
 
@@ -521,7 +522,7 @@ Original Text:
         let currentTemperature = 0.7;
         let currentRequestDelay = 4000;
         let currentTargetLangForRetry = '';
-        const proxyUrl = 'https://sbt.fxsinahamidi.workers.dev/';
+        const proxyUrl = 'https://middleman.yebekhe.workers.dev';
         let findState = { lastFoundRow: -1, lastFoundPos: -1, currentQuery: '' };
         let sessionOverrides = {};
 
